@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="no" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PocketPilot - ATPL Eksamenstrening</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        aviation: {
+                            dark: '#0f172a',
+                            card: '#1e293b',
+                            accent: '#3b82f6',
+                            gold: '#f59e0b',
+                            success: '#10b981',
+                            danger: '#ef4444'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-aviation-dark text-slate-100 font-sans h-full flex flex-col selection:bg-blue-500 selection:text-white">
+
+    <div id="app" class="max-w-4xl w-full mx-auto flex flex-col flex-1 p-3 sm:p-6 overflow-hidden">
+        
+        <!-- Header -->
+        <header class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800 shrink-0">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="app.showMenu()">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white font-bold text-xl">
+                    <i class="fa-solid fa-plane-up"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">PocketPilot</h1>
+                    <p class="text-xs text-slate-400">ATPL Eksamenssimulator</p>
+                </div>
+            </div>
+            <div id="header-actions" class="flex items-center space-x-2">
+                <button onclick="app.openImportModal()" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-medium rounded-xl transition shadow-md shadow-blue-600/20 flex items-center space-x-2">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span class="hidden sm:inline">Ny Bank</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto relative flex flex-col">
+
+            <div id="view-menu" class="view-section flex-1 flex flex-col space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-slate-200">Dine Spørsmålsbanker</h2>
+                    <span id="total-banks-count" class="text-xs px-2.5 py-1 bg-slate-800 rounded-full text-slate-400">0 banker</span>
+                </div>
+
+                <div id="banks-list" class="grid grid-cols-1 gap-3 pb-6">
+                    <!-- Dynamically populated -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-banks" class="hidden flex-1 flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/50">
+                    <div class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 text-2xl mb-4">
+                        <i class="fa-solid fa-book-open"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-slate-300 mb-1">Ingen spørsmålsbanker lagt til</h3>
+                    <p class="text-sm text-slate-500 max-w-sm mb-6">Lim inn råtekst fra din ATPL-spørsmålsbank for å starte treningen.</p>
+                    <button onclick="app.openImportModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition shadow-lg shadow-blue-600/20">
+                        Legg til første bank
+                    </button>
+                </div>
+            </div>
+
+            <div id="view-setup" class="view-section hidden flex-1 flex flex-col max-w-xl mx-auto w-full justify-center pb-6">
+                <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-5 sm:p-6 shadow-xl backdrop-blur-sm">
+                    <button onclick="app.showMenu()" class="text-xs text-blue-400 hover:text-blue-300 mb-4 flex items-center space-x-1.5 font-medium">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Tilbake til oversikt</span>
+                    </button>
+                    
+                    <h2 id="setup-bank-title" class="text-xl font-bold text-white mb-2">Spørsmålsbank Tittel</h2>
+                    <p id="setup-bank-stats" class="text-sm text-slate-400 mb-6">0 spørsmål totalt</p>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Antall spørsmål i økten</label>
+                            <div id="question-count-options" class="grid grid-cols-4 gap-2">
+                                <button type="button" onclick="app.setQuestionCount(10)" class="count-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-900/50 text-sm font-medium hover:border-blue-500 transition">10</button>
+                                <button type="button" onclick="app.setQuestionCount(25)" class="count-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-900/50 text-sm font-medium hover:border-blue-500 transition">25</button>
+                                <button type="button" onclick="app.setQuestionCount(50)" class="count-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-900/50 text-sm font-medium hover:border-blue-500 transition">50</button>
+                                <button type="button" onclick="app.setQuestionCount('all')" class="count-btn py-2.5 px-3 rounded-xl border border-blue-600 bg-blue-600/20 text-blue-400 text-sm font-medium transition">Alle</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700/40 flex items-center justify-between">
+                            <div>
+                                <span class="block text-sm font-medium text-slate-200">Prioriter uløste / feilbesvarte</span>
+                                <span class="block text-xs text-slate-400 mt-0.5">Vektlegg spørsmål du har svart feil på tidligere.</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setup-smart-mode" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+
+                        <button onclick="app.startQuiz('normal')" class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.99] text-white font-semibold rounded-xl shadow-lg shadow-blue-600/30 transition flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-play text-xs"></i>
+                            <span>Start Quiz</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-quiz" class="view-section hidden flex-1 flex flex-col justify-between pb-2">
+                <!-- Quiz Header bar -->
+                <div class="flex items-center justify-between mb-4">
+                    <button onclick="app.confirmExitQuiz()" class="text-xs text-slate-400 hover:text-slate-200 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-xmark"></i>
+                        <span>Avslutt</span>
+                    </button>
+                    <div class="flex items-center space-x-2">
+                        <span id="quiz-progress-text" class="text-xs font-semibold text-slate-300">Spørsmål 1 av 10</span>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-5">
+                    <div id="quiz-progress-bar" class="bg-blue-500 h-full transition-all duration-300" style="width: 10%;"></div>
+                </div>
+
+                <!-- Question Card -->
+                <div class="flex-1 flex flex-col overflow-y-auto mb-4 pr-1">
+                    <div class="bg-slate-800/90 border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-lg mb-4">
+                        <h3 id="quiz-question-text" class="text-base sm:text-lg font-medium text-slate-100 leading-relaxed">
+                            Hva er VFR?
+                        </h3>
+                    </div>
+
+                    <!-- Options list -->
+                    <div id="quiz-options-list" class="space-y-3 pb-2">
+                        <!-- Options populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Quiz Navigation Footer -->
+                <div class="pt-3 border-t border-slate-800 flex items-center justify-between shrink-0">
+                    <button id="btn-prev" onclick="app.prevQuestion()" class="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center space-x-2">
+                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                        <span>Forrige</span>
+                    </button>
+
+                    <button id="btn-next" onclick="app.nextQuestion()" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white text-sm font-semibold shadow-lg shadow-blue-600/20 transition flex items-center space-x-2">
+                        <span id="btn-next-text">Neste</span>
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="view-results" class="view-section hidden flex-1 flex flex-col max-w-xl mx-auto w-full justify-center pb-6">
+                <div class="bg-slate-800/90 border border-slate-700/60 rounded-2xl p-6 sm:p-8 text-center shadow-2xl backdrop-blur-sm">
+                    <div id="results-icon-container" class="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-4 shadow-xl">
+                        <i id="results-icon" class="fa-solid fa-trophy"></i>
+                    </div>
+                    
+                    <h2 class="text-2xl font-bold text-white mb-1">Quiz Fullført!</h2>
+                    <p id="results-bank-name" class="text-sm text-slate-400 mb-6">Meteorologi ATPL</p>
+
+                    <div class="grid grid-cols-3 gap-3 mb-6">
+                        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-700/50">
+                            <span class="block text-xs text-slate-400 mb-1">Riktige</span>
+                            <span id="res-correct" class="text-xl font-bold text-emerald-400">0</span>
+                        </div>
+                        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-700/50">
+                            <span class="block text-xs text-slate-400 mb-1">Feil</span>
+                            <span id="res-incorrect" class="text-xl font-bold text-rose-400">0</span>
+                        </div>
+                        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-700/50">
+                            <span class="block text-xs text-slate-400 mb-1">Score</span>
+                            <span id="res-percentage" class="text-xl font-bold text-blue-400">0%</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2.5">
+                        <button onclick="app.restartQuiz()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-rotate-right text-xs"></i>
+                            <span>Prøv igjen</span>
+                        </button>
+                        <button onclick="app.showMenu()" class="w-full py-3 bg-slate-900 hover:bg-slate-700 border border-slate-700 text-slate-300 font-medium rounded-xl transition">
+                            Tilbake til hovedmeny
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="modal-import" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between p-4 sm:p-5 border-b border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center space-x-2">
+                    <i class="fa-solid fa-file-import text-blue-500"></i>
+                    <span>Legg til ny spørsmålsbank</span>
+                </h3>
+                <button onclick="app.closeImportModal()" class="text-slate-400 hover:text-slate-200 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tittel på spørsmålsbank</label>
+                    <input type="text" id="import-title" placeholder="f.eks. ATPL 010 Meteorologi" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-blue-500 transition text-sm">
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Lim inn råtekst</label>
+                        <span class="text-xs text-slate-500">Format: 1. Spørsmål? \n a) Svar \n *b) Korrekt svar</span>
+                    </div>
+                    <textarea id="import-text" rows="8" placeholder="1. Hva er VFR?&#10;a) Visual Flight Rules&#10;*b) Visual Flight Requirements&#10;c) Vector Flight Rules" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-blue-500 transition text-sm font-mono"></textarea>
+                </div>
+
+                <div class="bg-blue-950/30 border border-blue-900/50 p-4 rounded-xl text-xs text-blue-300 flex space-x-3">
+                    <i class="fa-solid fa-circle-info text-blue-400 text-base mt-0.5 shrink-0"></i>
+                    <div>
+                        <span class="font-semibold block mb-0.5">Tips til formatering:</span>
+                        Spørsmål må starte med tall og punktum (f.eks. <code class="bg-blue-900/50 px-1 rounded">1.</code>). Alternativer med bokstav og parentes (<code class="bg-blue-900/50 px-1 rounded">a)</code>, <code class="bg-blue-900/50 px-1 rounded">b)</code>). Det korrekte svaralternativet merkes med stjerne foran (<code class="bg-blue-900/50 px-1 rounded">*a)</code>).
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 sm:p-5 border-t border-slate-800 flex items-center justify-end space-x-3 bg-slate-900/50">
+                <button onclick="app.closeImportModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-700 transition">Avbryt</button>
+                <button onclick="app.saveImportedBank()" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/20 transition">Lagre bank</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-dialog" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center">
+            <div id="dialog-icon" class="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 text-xl flex items-center justify-center mx-auto mb-3">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h4 id="dialog-title" class="text-base font-bold text-white mb-1">Bekreftelse</h4>
+            <p id="dialog-message" class="text-sm text-slate-400 mb-6">Er du sikker på at du vil fortsette?</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="dialog-btn-cancel" onclick="app.closeDialog()" class="py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-700 transition">Avbryt</button>
+                <button id="dialog-btn-confirm" class="py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/20 transition">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PocketPilotApp {
+            constructor() {
+                this.banks = [];
+                this.currentBankId = null;
+                this.selectedCount = 'all';
+                this.smartMode = true;
+                this.quizMode = 'normal'; // 'normal' or 'incorrect'
+                
+                // Active quiz session state
+                this.activeQuizQuestions = [];
+                this.currentQuestionIndex = 0;
+                this.userAnswers = {}; // questionIndex -> selectedOptionLetter
+                this.isAnswered = {}; // questionIndex -> boolean
+                this.sessionCorrectCount = 0;
+                this.sessionIncorrectCount = 0;
+
+                this.loadFromStorage();
+            }
+
+            loadFromStorage() {
+                try {
+                    const saved = localStorage.getItem('pocketpilot_banks');
+                    if (saved) {
+                        this.banks = JSON.parse(saved);
+                    } else {
+                        this.loadSampleBank();
+                    }
+                } catch(e) {
+                    console.error('Kunne ikke laste fra lagring', e);
+                    this.banks = [];
+                }
+            }
+
+            saveToStorage() {
+                try {
+                    localStorage.setItem('pocketpilot_banks', JSON.stringify(this.banks));
+                } catch(e) {
+                    console.error('Kunne ikke lagre til lagring', e);
+                }
+            }
+
+            loadSampleBank() {
+                const sampleText = `1. Hva står VFR for?
+a) Vector Flight Rules
+*b) Visual Flight Rules
+c) Variable Flight Range
+d) Visual Flight Requirements
+
+2. Hva er definisjonen på IMC?
+*a) Instrument Meteorological Conditions
+b) International Meteorological Center
+c) Instrument Minimum Clearance
+d) Internal Meteorological Control
+
+3. Hva viser en høydemåler innstilt på QNH?
+a) Høyde over gjennomsnittlig havnivå i standardatmosfæren
+*b) Høyde over havet basert på faktisk lokal lufttrykk ved havoverflaten
+c) Høyde over flyplassens bakkenivå
+d) Trykkhøyde i standardatmosfæren
+
+4. Hvilken farge har navigasjonslyset på styrbord (høyre) vingetipp?
+*a) Grønn
+b) Rød
+c) Hvit
+d) Blå`;
+
+                const parsed = this.parseQuestionBankText(sampleText);
+                this.banks.push({
+                    id: 'sample_' + Date.now(),
+                    title: 'ATPL Eksempelbank (Generell Luftfart)',
+                    questions: parsed,
+                    progress: {}
+                });
+                this.saveToStorage();
+            }
+
+            parseQuestionBankText(rawText) {
+                const lines = rawText.split(/\r?\n/);
+                const questions = [];
+                let currentQuestionText = null;
+                let currentOptions = [];
+
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trim();
+                    if (!line) continue;
+
+                    const qMatch = line.match(/^(\d+)[\.\)]\s+(.*)$/);
+                    if (qMatch) {
+                        if (currentQuestionText && currentOptions.length > 0) {
+                            questions.push({
+                                id: questions.length + 1,
+                                text: currentQuestionText,
+                                options: currentOptions
+                            });
+                        }
+                        currentQuestionText = qMatch[2];
+                        currentOptions = [];
+                        continue;
+                    }
+
+                    const optMatch = line.match(/^(\*)?([a-zA-Z])[\.\)]\s+(.*)$/);
+                    if (optMatch && currentQuestionText) {
+                        const isCorrect = !!optMatch[1];
+                        const letter = optMatch[2].toLowerCase();
+                        const text = optMatch[3];
+                        currentOptions.push({
+                            letter: letter,
+                            text: text,
+                            correct: isCorrect
+                        });
+                    }
+                }
+
+                if (currentQuestionText && currentOptions.length > 0) {
+                    questions.push({
+                        id: questions.length + 1,
+                        text: currentQuestionText,
+                        options: currentOptions
+                    });
+                }
+
+                return questions;
+            }
+
+            switchView(viewName) {
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+                document.getElementById(`view-${viewName}`).classList.remove('hidden');
+                window.scrollTo(0, 0);
+            }
+
+            showMenu() {
+                this.renderBanksList();
+                this.switchView('menu');
+            }
+
+            renderBanksList() {
+                const listEl = document.getElementById('banks-list');
+                const emptyEl = document.getElementById('empty-banks');
+                const countBadge = document.getElementById('total-banks-count');
+
+                countBadge.textContent = `${this.banks.length} ${this.banks.length === 1 ? 'bank' : 'banker'}`;
+
+                if (this.banks.length === 0) {
+                    listEl.innerHTML = '';
+                    emptyEl.classList.remove('hidden');
+                    return;
+                }
+
+                emptyEl.classList.add('hidden');
+                listEl.innerHTML = '';
+
+                this.banks.forEach(bank => {
+                    const totalQ = bank.questions.length;
+                    
+                    let answeredCorrectlyCount = 0;
+                    let incorrectCount = 0;
+                    if (bank.progress) {
+                        Object.values(bank.progress).forEach(p => {
+                            if (p.lastState === 'correct') answeredCorrectlyCount++;
+                            if (p.lastState === 'incorrect') incorrectCount++;
+                        });
+                    }
+                    const pct = totalQ > 0 ? Math.round((answeredCorrectlyCount / totalQ) * 100) : 0;
+
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 sm:p-5 hover:border-slate-600 transition shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4";
+                    
+                    let incorrectButtonHtml = '';
+                    if (incorrectCount > 0) {
+                        incorrectButtonHtml = `
+                            <button onclick="app.startIncorrectQuiz('${bank.id}')" class="px-3.5 py-2.5 bg-rose-600/20 border border-rose-500/40 hover:bg-rose-600/30 text-rose-300 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                                <span>Øv på feil (${incorrectCount})</span>
+                            </button>
+                        `;
+                    }
+
+                    card.innerHTML = `
+                        <div class="space-y-1.5 flex-1">
+                            <h3 class="font-semibold text-slate-100 text-base sm:text-lg flex items-center space-x-2">
+                                <i class="fa-solid fa-book text-blue-400 text-sm"></i>
+                                <span>${this.escapeHtml(bank.title)}</span>
+                            </h3>
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+                                <span><i class="fa-solid fa-clipboard-question mr-1 text-slate-500"></i> ${totalQ} spørsmål</span>
+                                <span><i class="fa-solid fa-circle-check mr-1 text-emerald-500"></i> ${pct}% mestret</span>
+                                ${incorrectCount > 0 ? `<span class="text-rose-400"><i class="fa-solid fa-circle-xmark mr-1"></i> ${incorrectCount} feil</span>` : ''}
+                            </div>
+                            <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden max-w-md mt-2">
+                                <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            ${incorrectButtonHtml}
+                            <button onclick="app.openSetup('${bank.id}')" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-blue-600/20 transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-play text-[10px]"></i>
+                                <span>Start</span>
+                            </button>
+                            <button onclick="app.resetBankProgress('${bank.id}')" title="Tilbakestill fremgang" class="p-2.5 bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-xl transition">
+                                <i class="fa-solid fa-rotate-right text-xs"></i>
+                            </button>
+                            <button onclick="app.confirmDeleteBank('${bank.id}')" title="Slett bank" class="p-2.5 bg-slate-900 hover:bg-rose-950/50 text-slate-400 hover:text-rose-400 rounded-xl transition">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    `;
+                    listEl.appendChild(card);
+                });
+            }
+
+            openSetup(bankId) {
+                const bank = this.banks.find(b => b.id === bankId);
+                if (!bank) return;
+
+                this.currentBankId = bankId;
+                this.quizMode = 'normal';
+                document.getElementById('setup-bank-title').textContent = bank.title;
+                document.getElementById('setup-bank-stats').textContent = `${bank.questions.length} spørsmål totalt`;
+
+                this.setQuestionCount(Math.min(25, bank.questions.length));
+                this.switchView('setup');
+            }
+
+            setQuestionCount(count) {
+                this.selectedCount = count;
+                document.querySelectorAll('.count-btn').forEach(btn => {
+                    btn.className = "count-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-900/50 text-sm font-medium hover:border-blue-500 transition text-slate-300";
+                });
+                event.target.className = "count-btn py-2.5 px-3 rounded-xl border border-blue-600 bg-blue-600/20 text-blue-400 text-sm font-medium transition";
+            }
+
+            startIncorrectQuiz(bankId) {
+                const bank = this.banks.find(b => b.id === bankId);
+                if (!bank) return;
+
+                this.currentBankId = bankId;
+                this.quizMode = 'incorrect';
+
+                // Filter questions that are marked as incorrect
+                let incorrectPool = bank.questions.filter(q => {
+                    return bank.progress && bank.progress[q.id] && bank.progress[q.id].lastState === 'incorrect';
+                });
+
+                if (incorrectPool.length === 0) {
+                    this.showAlert("Ingen feilbesvarte spørsmål i denne banken!");
+                    return;
+                }
+
+                // Shuffle incorrect questions
+                incorrectPool.sort(() => Math.random() - 0.5);
+
+                this.activeQuizQuestions = incorrectPool;
+                this.currentQuestionIndex = 0;
+                this.userAnswers = {};
+                this.isAnswered = {};
+                this.sessionCorrectCount = 0;
+                this.sessionIncorrectCount = 0;
+
+                this.switchView('quiz');
+                this.renderCurrentQuestion();
+            }
+
+            startQuiz(mode = 'normal') {
+                const bank = this.banks.find(b => b.id === this.currentBankId);
+                if (!bank || bank.questions.length === 0) return;
+
+                this.quizMode = mode;
+                this.smartMode = document.getElementById('setup-smart-mode').checked;
+
+                let questionsPool = [...bank.questions];
+
+                if (this.smartMode) {
+                    questionsPool.sort((a, b) => {
+                        const pA = bank.progress[a.id] ? bank.progress[a.id].lastState : 'none';
+                        const pB = bank.progress[b.id] ? bank.progress[b.id].lastState : 'none';
+
+                        const scoreMap = { 'none': 0, 'incorrect': 1, 'correct': 2 };
+                        return scoreMap[pA] - scoreMap[pB];
+                    });
+                } else {
+                    questionsPool.sort(() => Math.random() - 0.5);
+                }
+
+                let limit = this.selectedCount === 'all' ? questionsPool.length : parseInt(this.selectedCount);
+                this.activeQuizQuestions = questionsPool.slice(0, limit);
+
+                this.currentQuestionIndex = 0;
+                this.userAnswers = {};
+                this.isAnswered = {};
+                this.sessionCorrectCount = 0;
+                this.sessionIncorrectCount = 0;
+
+                this.switchView('quiz');
+                this.renderCurrentQuestion();
+            }
+
+            renderCurrentQuestion() {
+                const total = this.activeQuizQuestions.length;
+                const idx = this.currentQuestionIndex;
+                const q = this.activeQuizQuestions[idx];
+
+                document.getElementById('quiz-progress-text').textContent = `Spørsmål ${idx + 1} av ${total}`;
+                const progressPct = ((idx + 1) / total) * 100;
+                document.getElementById('quiz-progress-bar').style.width = `${progressPct}%`;
+
+                const modePrefix = this.quizMode === 'incorrect' ? '<span class="text-rose-400 font-semibold mr-2">[Feilretting]</span>' : `<span class="text-blue-400 font-semibold mr-2">#${idx + 1}</span>`;
+                document.getElementById('quiz-question-text').innerHTML = `${modePrefix} ${this.escapeHtml(q.text)}`;
+
+                const optionsListEl = document.getElementById('quiz-options-list');
+                optionsListEl.innerHTML = '';
+
+                const answered = !!this.isAnswered[idx];
+                const selectedLetter = this.userAnswers[idx];
+
+                q.options.forEach(opt => {
+                    const isSelected = selectedLetter === opt.letter;
+                    
+                    let btnClass = "w-full text-left p-4 rounded-xl border transition flex items-start space-x-3 text-sm sm:text-base ";
+                    let iconHtml = `<div class="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0 uppercase">${opt.letter}</div>`;
+
+                    if (answered) {
+                        if (opt.correct) {
+                            btnClass += "bg-emerald-950/40 border-emerald-500/80 text-emerald-100 shadow-lg shadow-emerald-950/30";
+                            iconHtml = `<div class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0 uppercase"><i class="fa-solid fa-check"></i></div>`;
+                        } else if (isSelected && !opt.correct) {
+                            btnClass += "bg-rose-950/40 border-rose-500/80 text-rose-100 shadow-lg shadow-rose-950/30";
+                            iconHtml = `<div class="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center text-xs font-bold shrink-0 uppercase"><i class="fa-solid fa-xmark"></i></div>`;
+                        } else {
+                            btnClass += "bg-slate-900/40 border-slate-800 text-slate-400 opacity-60";
+                        }
+                    } else {
+                        btnClass += "bg-slate-800/80 border-slate-700/60 hover:border-blue-500 hover:bg-slate-800 text-slate-200 active:scale-[0.99]";
+                    }
+
+                    const btn = document.createElement('button');
+                    btn.className = btnClass;
+                    btn.disabled = answered;
+                    btn.innerHTML = `
+                        ${iconHtml}
+                        <div class="flex-1 pt-0.5">${this.escapeHtml(opt.text)}</div>
+                    `;
+                    btn.onclick = () => this.handleAnswer(opt.letter);
+                    optionsListEl.appendChild(btn);
+                });
+
+                document.getElementById('btn-prev').disabled = idx === 0;
+                const nextBtnText = document.getElementById('btn-next-text');
+                if (idx === total - 1) {
+                    nextBtnText.textContent = "Fullfør quiz";
+                } else {
+                    nextBtnText.textContent = "Neste";
+                }
+            }
+
+            handleAnswer(letter) {
+                if (this.isAnswered[this.currentQuestionIndex]) return;
+
+                const q = this.activeQuizQuestions[this.currentQuestionIndex];
+                const selectedOpt = q.options.find(o => o.letter === letter);
+                const isCorrect = selectedOpt ? selectedOpt.correct : false;
+
+                this.isAnswered[this.currentQuestionIndex] = true;
+                this.userAnswers[this.currentQuestionIndex] = letter;
+
+                if (isCorrect) {
+                    this.sessionCorrectCount++;
+                } else {
+                    this.sessionIncorrectCount++;
+                }
+
+                const bank = this.banks.find(b => b.id === this.currentBankId);
+                if (bank) {
+                    if (!bank.progress) bank.progress = {};
+                    
+                    // If answering correctly in 'incorrect' mode, mark as 'correct' so it clears from error list
+                    bank.progress[q.id] = {
+                        lastState: isCorrect ? 'correct' : 'incorrect',
+                        updatedAt: Date.now()
+                    };
+                    this.saveToStorage();
+                }
+
+                this.renderCurrentQuestion();
+            }
+
+            prevQuestion() {
+                if (this.currentQuestionIndex > 0) {
+                    this.currentQuestionIndex--;
+                    this.renderCurrentQuestion();
+                }
+            }
+
+            nextQuestion() {
+                if (this.currentQuestionIndex < this.activeQuizQuestions.length - 1) {
+                    this.currentQuestionIndex++;
+                    this.renderCurrentQuestion();
+                } else {
+                    this.finishQuiz();
+                }
+            }
+
+            finishQuiz() {
+                const total = this.activeQuizQuestions.length;
+                const correct = this.sessionCorrectCount;
+                const incorrect = this.sessionIncorrectCount;
+                const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+                const bank = this.banks.find(b => b.id === this.currentBankId);
+                if (bank) {
+                    document.getElementById('results-bank-name').textContent = bank.title;
+                }
+
+                document.getElementById('res-correct').textContent = correct;
+                document.getElementById('res-incorrect').textContent = incorrect;
+                document.getElementById('res-percentage').textContent = `${pct}%`;
+
+                const iconContainer = document.getElementById('results-icon-container');
+                const icon = document.getElementById('results-icon');
+
+                if (pct >= 75) {
+                    iconContainer.className = "w-20 h-20 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-4 shadow-xl bg-emerald-500/20 text-emerald-400";
+                    icon.className = "fa-solid fa-trophy";
+                } else {
+                    iconContainer.className = "w-20 h-20 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-4 shadow-xl bg-amber-500/20 text-amber-400";
+                    icon.className = "fa-solid fa-book-open-reader";
+                }
+
+                this.switchView('results');
+            }
+
+            restartQuiz() {
+                if (this.quizMode === 'incorrect') {
+                    this.startIncorrectQuiz(this.currentBankId);
+                } else {
+                    this.startQuiz(this.quizMode);
+                }
+            }
+
+            confirmExitQuiz() {
+                this.showDialog(
+                    "Avbryt økt",
+                    "Er du sikker på at du vil avslutte quizen? Fremgang i denne økten vil gå tapt.",
+                    () => {
+                        this.showMenu();
+                        this.closeDialog();
+                    }
+                );
+            }
+
+            openImportModal() {
+                document.getElementById('import-title').value = '';
+                document.getElementById('import-text').value = '';
+                document.getElementById('modal-import').classList.remove('hidden');
+            }
+
+            closeImportModal() {
+                document.getElementById('modal-import').classList.add('hidden');
+            }
+
+            saveImportedBank() {
+                const title = document.getElementById('import-title').value.trim();
+                const text = document.getElementById('import-text').value.trim();
+
+                if (!title) {
+                    this.showAlert("Vennligst skriv inn en tittel på spørsmålsbanken.");
+                    return;
+                }
+                if (!text) {
+                    this.showAlert("Vennligst lim inn spørsmålstekst.");
+                    return;
+                }
+
+                const parsedQuestions = this.parseQuestionBankText(text);
+                if (parsedQuestions.length === 0) {
+                    this.showAlert("Kunne ikke gjenkjenne noen spørsmål. Sjekk at formatet følger instruksjonene (f.eks. '1. Spørsmål' og '*a) Svar').");
+                    return;
+                }
+
+                const newBank = {
+                    id: 'bank_' + Date.now(),
+                    title: title,
+                    questions: parsedQuestions,
+                    progress: {}
+                };
+
+                this.banks.push(newBank);
+                this.saveToStorage();
+                this.closeImportModal();
+                this.showMenu();
+            }
+
+            resetBankProgress(bankId) {
+                this.showDialog(
+                    "Nullstill fremgang",
+                    "Vil du tilskrive all statistikk og mestring for denne banken på nytt?",
+                    () => {
+                        const bank = this.banks.find(b => b.id === bankId);
+                        if (bank) {
+                            bank.progress = {};
+                            this.saveToStorage();
+                            this.renderBanksList();
+                        }
+                        this.closeDialog();
+                    }
+                );
+            }
+
+            confirmDeleteBank(bankId) {
+                this.showDialog(
+                    "Slett spørsmålsbank",
+                    "Er du sikker på at du vil slette denne banken permanent?",
+                    () => {
+                        this.banks = this.banks.filter(b => b.id !== bankId);
+                        this.saveToStorage();
+                        this.renderBanksList();
+                        this.closeDialog();
+                    }
+                );
+            }
+
+            showAlert(message) {
+                this.showDialog("Melding", message, () => this.closeDialog(), true);
+            }
+
+            showDialog(title, message, onConfirm, singleButton = false) {
+                document.getElementById('dialog-title').textContent = title;
+                document.getElementById('dialog-message').textContent = message;
+                
+                const cancelBtn = document.getElementById('dialog-btn-cancel');
+                const confirmBtn = document.getElementById('dialog-btn-confirm');
+
+                if (singleButton) {
+                    cancelBtn.classList.add('hidden');
+                    confirmBtn.textContent = "OK";
+                    confirmBtn.onclick = () => this.closeDialog();
+                } else {
+                    cancelBtn.classList.remove('hidden');
+                    confirmBtn.textContent = "Bekreft";
+                    confirmBtn.onclick = onConfirm;
+                }
+
+                document.getElementById('modal-dialog').classList.remove('hidden');
+            }
+
+            closeDialog() {
+                document.getElementById('modal-dialog').classList.add('hidden');
+            }
+
+            escapeHtml(str) {
+                if (!str) return '';
+                return str
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+        }
+
+        const app = new PocketPilotApp();
+
+        window.onload = function() {
+            app.renderBanksList();
+        };
+    </script>
+</body>
+</html>
